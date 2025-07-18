@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from ..models.crop import Crop, CropRead, CropCreate
 from ..core.database import get_session
 from ..services.crop_service import CropService
+from ..services.crop_difficulty_import_service import CropDifficultyImportService
 from ..core.logging import get_logger
 
 router = APIRouter(prefix="/crops", tags=["crops"])
@@ -14,6 +15,11 @@ logger = get_logger("crops_api")
 def get_crop_service(session: Session = Depends(get_session)) -> CropService:
     """作物サービスを取得"""
     return CropService(session)
+
+
+def get_difficulty_import_service(session: Session = Depends(get_session)) -> CropDifficultyImportService:
+    """作物難易度インポートサービスを取得"""
+    return CropDifficultyImportService(session)
 
 
 @router.get("/", response_model=List[CropRead])
@@ -63,3 +69,21 @@ def get_crop_count(crop_service: CropService = Depends(get_crop_service)):
     """作物の総数を取得"""
     logger.info("作物総数取得")
     return crop_service.get_crop_count()
+
+
+@router.post("/import-difficulties", response_model=Dict[str, Any])
+def import_crop_difficulties(
+    difficulty_service: CropDifficultyImportService = Depends(get_difficulty_import_service)
+):
+    """作物難易度データをCSVからインポート"""
+    logger.info("作物難易度データインポート開始")
+    return difficulty_service.import_crop_difficulties_from_csv()
+
+
+@router.get("/stats/difficulties", response_model=Dict[str, Any])
+def get_difficulty_stats(
+    difficulty_service: CropDifficultyImportService = Depends(get_difficulty_import_service)
+):
+    """作物難易度統計情報を取得"""
+    logger.info("作物難易度統計情報取得")
+    return difficulty_service.get_difficulty_stats()

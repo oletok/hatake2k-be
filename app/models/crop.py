@@ -10,6 +10,8 @@ class Crop(SQLModel, table=True):
     category: str = Field(index=True)
     name: str = Field(index=True)
     aliases: List[str] = Field(default_factory=list, sa_column=Column(JSONB))
+    difficulty: Optional[int] = Field(default=None, description="栽培難易度 (1-100)")
+    difficulty_reason: Optional[str] = Field(default=None, description="難易度の理由")
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
@@ -34,6 +36,8 @@ class CropRead(SQLModel):
     category: str
     name: str
     aliases: List[str]
+    difficulty: Optional[int]
+    difficulty_reason: Optional[str]
     created_at: datetime
     updated_at: datetime
 
@@ -46,3 +50,5 @@ class CropUpdate(SQLModel):
     category: Optional[str] = None
     name: Optional[str] = None
     aliases: Optional[List[str]] = None
+    difficulty: Optional[int] = None
+    difficulty_reason: Optional[str] = None
