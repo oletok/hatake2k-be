@@ -264,7 +264,7 @@ class PostalCodeService:
             
             if search_params.postal_code:
                 statement = statement.where(
-                    PostalCode.postal_code.ilike(f"%{search_params.postal_code}%")
+                    PostalCode.postal_code.ilike(f"{search_params.postal_code}%")
                 )
             
             if search_params.prefecture:
@@ -306,7 +306,7 @@ class PostalCodeService:
             
             if search_params.postal_code:
                 statement = statement.where(
-                    PostalCode.postal_code.ilike(f"%{search_params.postal_code}%")
+                    PostalCode.postal_code.ilike(f"{search_params.postal_code}%")
                 )
             
             if search_params.prefecture:
