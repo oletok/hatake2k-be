@@ -88,18 +88,32 @@ uvicorn app.main:app --reload
 
 ### 農作物
 
-- `GET /crops` - 農作物一覧取得
-- `GET /crops/{crop_id}` - 農作物詳細取得
+- `GET /crops/` - 農作物一覧取得
+- `GET /crops/{code}` - 農作物コードで作物を取得
+- `GET /crops/search/` - 農作物名・異名で検索
+- `GET /crops/categories/` - 農作物カテゴリー一覧取得
+- `GET /crops/stats/count` - 農作物の総数取得
 
 ### 天気エリア
 
-- `GET /weather-areas` - 天気エリア一覧取得
-- `GET /weather-areas/{area_id}` - 天気エリア詳細取得
+- `GET /weather-areas/search` - 天気エリア検索
+- `GET /weather-areas/prefectures/` - 都道府県一覧取得
+- `GET /weather-areas/regions/` - 地方・区分一覧取得
+- `GET /weather-areas/regions/{prefecture}` - 都道府県別地方一覧取得
+- `GET /weather-areas/cities/{prefecture}` - 都道府県別市区町村一覧取得
+- `GET /weather-areas/cities/{prefecture}/{region}` - 都道府県・地方別市区町村一覧取得
+- `GET /weather-areas/weather-regions/` - 気象地域の階層構造取得
+- `GET /weather-areas/stats/summary` - 天気エリア統計情報取得
 
 ### 郵便番号
 
-- `GET /postal-codes` - 郵便番号一覧取得
-- `GET /postal-codes/{postal_code}` - 郵便番号詳細取得
+- `GET /postal-codes/search` - 郵便番号検索
+- `GET /postal-codes/code/{postal_code}` - 郵便番号で住所を取得
+- `GET /postal-codes/prefectures/` - 都道府県一覧取得
+- `GET /postal-codes/cities/{prefecture}` - 都道府県別市区町村一覧取得
+- `GET /postal-codes/search-with-weather` - 気象地域情報を含む郵便番号検索
+- `GET /postal-codes/stats/summary` - 郵便番号統計情報取得
+- `GET /postal-codes/mapping-stats` - マッピング統計情報取得
 
 ## 開発
 

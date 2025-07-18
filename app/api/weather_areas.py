@@ -129,44 +129,6 @@ def get_weather_area_stats(
     return weather_service.get_weather_area_stats()
 
 
-@router.post("/import", response_model=WeatherAreaImportStats)
-def import_weather_areas(
-    background_tasks: BackgroundTasks,
-    data_version: Optional[str] = Query(None, description="データバージョン"),
-    update_existing: bool = Query(False, description="既存データを更新するかどうか"),
-    weather_service: WeatherAreaService = Depends(get_weather_area_service)
-):
-    """
-    気象地域データをCSVからインポート
-    
-    注意: 市区町村名のパイプ区切りを個別レコードに分割してインポートします
-    """
-    logger.info(f"気象地域インポート開始: version={data_version}, update={update_existing}")
-    
-    try:
-        # バックグラウンドタスクとして実行
-        def import_task():
-            return weather_service.import_weather_areas_from_csv(
-                data_version=data_version,
-                update_existing=update_existing
-            )
-        
-        # 実際のインポート処理
-        result = import_task()
-        
-        # バックグラウンドタスクに登録（ログ出力用）
-        background_tasks.add_task(
-            lambda: logger.info(f"インポート完了: {result}")
-        )
-        
-        return result
-        
-    except FileNotFoundError as e:
-        logger.error(f"CSVファイルが見つかりません: {e}")
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        logger.error(f"インポートエラー: {e}")
-        raise HTTPException(status_code=500, detail="インポートに失敗しました")
 
 
 @router.get("/weather-regions/", response_model=List[Dict[str, Any]])

@@ -86,44 +86,6 @@ def get_postal_code_stats(
     return postal_service.get_postal_code_stats()
 
 
-@router.post("/import", response_model=PostalCodeImportStats)
-def import_postal_codes(
-    background_tasks: BackgroundTasks,
-    data_version: Optional[str] = Query(None, description="データバージョン"),
-    update_existing: bool = Query(False, description="既存データを更新するかどうか"),
-    postal_service: PostalCodeService = Depends(get_postal_code_service)
-):
-    """
-    郵便番号データをCSVからインポート
-    
-    注意: 大量データの処理のため、バックグラウンドで実行されます
-    """
-    logger.info(f"郵便番号インポート開始: version={data_version}, update={update_existing}")
-    
-    try:
-        # バックグラウンドタスクとして実行
-        def import_task():
-            return postal_service.import_postal_codes_from_csv(
-                data_version=data_version,
-                update_existing=update_existing
-            )
-        
-        # 実際のインポート処理
-        result = import_task()
-        
-        # バックグラウンドタスクに登録（ログ出力用）
-        background_tasks.add_task(
-            lambda: logger.info(f"インポート完了: {result}")
-        )
-        
-        return result
-        
-    except FileNotFoundError as e:
-        logger.error(f"CSVファイルが見つかりません: {e}")
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        logger.error(f"インポートエラー: {e}")
-        raise HTTPException(status_code=500, detail="インポートに失敗しました")
 
 
 @router.get("/prefectures/", response_model=List[str])
@@ -176,36 +138,6 @@ def search_postal_codes_with_weather_area(
     return postal_service.search_postal_codes_with_weather_area(search_params, limit)
 
 
-@router.post("/map-weather-areas")
-def map_postal_codes_to_weather_areas(
-    background_tasks: BackgroundTasks,
-    mapping_service: PostalCodeWeatherMappingService = Depends(get_mapping_service)
-):
-    """
-    郵便番号データに気象地域をマッピング
-    
-    注意: 大量データの処理のため、時間がかかる場合があります
-    """
-    logger.info("郵便番号と気象地域のマッピング開始")
-    
-    try:
-        # バックグラウンドタスクとして実行
-        def mapping_task():
-            return mapping_service.map_postal_codes_to_weather_areas()
-        
-        # 実際のマッピング処理
-        result = mapping_task()
-        
-        # バックグラウンドタスクに登録（ログ出力用）
-        background_tasks.add_task(
-            lambda: logger.info(f"マッピング完了: {result}")
-        )
-        
-        return result
-        
-    except Exception as e:
-        logger.error(f"マッピングエラー: {e}")
-        raise HTTPException(status_code=500, detail="マッピングに失敗しました")
 
 
 @router.get("/mapping-stats")

@@ -56,14 +56,6 @@ def get_crop_categories(crop_service: CropService = Depends(get_crop_service)):
     return crop_service.get_categories()
 
 
-@router.post("/", response_model=CropRead)
-def create_crop(
-    crop_data: CropCreate,
-    crop_service: CropService = Depends(get_crop_service)
-):
-    """作物を作成"""
-    logger.info(f"作物作成: {crop_data.code}")
-    return crop_service.create_crop(crop_data)
 
 
 @router.get("/stats/count", response_model=int)
