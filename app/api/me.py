@@ -6,6 +6,7 @@ from ..models.user import User
 from ..models.crop import Crop
 from ..models.weather_area import WeatherArea
 from ..models.crop_weather_area import CropWeatherArea
+from ..models.growing import Growing
 from ..core.database import get_session
 from ..core.logging import get_logger
 
@@ -57,65 +58,46 @@ def get_my_weather_area(
 
 
 @router.get("/crops", response_model=List[Dict[str, Any]])
-def get_my_crops_difficulties(
+def get_my_crops(
     session: Session = Depends(get_session),
-    current_user_id: int = Depends(get_current_user_id),
-    limit: int = Query(50, ge=1, le=500, description="取得件数"),
-    category: Optional[str] = Query(None, description="作物カテゴリーフィルター")
+    current_user_id: int = Depends(get_current_user_id)
 ):
-    """自分の気象地域での全作物栽培難易度一覧を取得"""
-    logger.info(f"ユーザー{current_user_id}の作物栽培難易度一覧取得")
+    """ユーザーが栽培している作物一覧を取得"""
+    logger.info(f"ユーザー{current_user_id}の栽培作物一覧取得")
     
     # ユーザーを取得
     user = session.exec(select(User).where(User.id == current_user_id)).first()
     if not user:
         raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
     
-    if not user.weather_area_id:
-        raise HTTPException(status_code=400, detail="気象地域が設定されていません")
-    
-    # 気象地域情報を取得
-    weather_area = session.exec(
-        select(WeatherArea).where(WeatherArea.id == user.weather_area_id)
-    ).first()
-    
-    # 作物×気象地域の難易度データを取得
-    query = select(CropWeatherArea, Crop).join(
-        Crop, CropWeatherArea.crop_id == Crop.id
+    # ユーザーの栽培作物を取得
+    query = select(Growing, Crop).join(
+        Crop, Growing.crop_id == Crop.id
     ).where(
-        CropWeatherArea.weather_area_id == user.weather_area_id
-    )
-    
-    # カテゴリーフィルター
-    if category:
-        query = query.where(Crop.category == category)
-    
-    # 難易度順でソート（難易度が低い順）
-    query = query.order_by(CropWeatherArea.difficulty.asc())
-    query = query.limit(limit)
+        Growing.user_id == current_user_id
+    ).order_by(Growing.created_at.desc())
     
     results = session.exec(query).all()
     
-    crop_difficulties = []
-    for difficulty, crop in results:
-        crop_difficulties.append({
-            "crop": {
-                "id": crop.id,
-                "code": crop.code,
-                "name": crop.name,
-                "category": crop.category,
-                "aliases": crop.aliases
-            },
-            "difficulty": difficulty.difficulty,
-            "difficulty_reasons": difficulty.difficulty_reasons,
-            "weather_area": {
-                "id": weather_area.id,
-                "prefecture": weather_area.prefecture,
-                "region": weather_area.region
+    crops = []
+    for growing, crop in results:
+        crops.append({
+            "id": crop.id,
+            "code": crop.code,
+            "name": crop.name,
+            "category": crop.category,
+            "aliases": crop.aliases,
+            "difficulty": crop.difficulty,
+            "difficulty_reasons": crop.difficulty_reasons,
+            "growing": {
+                "id": growing.id,
+                "notes": growing.notes,
+                "created_at": growing.created_at,
+                "updated_at": growing.updated_at
             }
         })
     
-    return crop_difficulties
+    return crops
 
 
 @router.get("/crops/{crop_code}", response_model=Dict[str, Any])

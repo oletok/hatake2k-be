@@ -1,5 +1,5 @@
 erDiagram
-    %% 自動生成されたER図 - 2025-07-19 13:07:44
+    %% 自動生成されたER図 - 2025-07-19 15:48:23
 
     users {
         int id PK "主キー"
@@ -46,6 +46,15 @@ erDiagram
         datetime updated_at "更新日時"
     }
 
+    growings {
+        int id PK "主キー"
+        int user_id FK "ユーザーID"
+        int crop_id FK "農作物ID"
+        jsonb notes "栽培メモ・ノート"
+        datetime created_at "作成日時"
+        datetime updated_at "更新日時"
+    }
+
     postal_codes {
         int id PK "主キー"
         string postal_code "郵便番号7桁"
@@ -60,6 +69,8 @@ erDiagram
 
     %% Relations
     users }o--|| weather_areas : "weather_area"
+    users ||--o{ growings : "growings"
+    crops ||--o{ growings : "growings"
     crop_weather_areas }o--|| crops : "crop"
     crop_weather_areas }o--|| weather_areas : "weather_area"
     weather_areas ||--o{ postal_codes : "postal_codes"

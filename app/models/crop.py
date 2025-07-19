@@ -1,7 +1,10 @@
-from sqlmodel import SQLModel, Field, Column
-from typing import Optional, List
+from sqlmodel import SQLModel, Field, Column, Relationship
+from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
 from sqlalchemy.dialects.postgresql import JSONB
+
+if TYPE_CHECKING:
+    from .growing import Growing
 
 
 class Crop(SQLModel, table=True):
@@ -16,6 +19,9 @@ class Crop(SQLModel, table=True):
     difficulty_reasons: List[str] = Field(default_factory=list, sa_column=Column(JSONB), description="難易度の理由配列")
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
+    
+    # リレーション
+    growings: List["Growing"] = Relationship(back_populates="crop")
 
     def get_aliases_list(self) -> List[str]:
         """異名をリストで取得"""

@@ -1,9 +1,10 @@
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Column, DateTime, Relationship
 
 if TYPE_CHECKING:
     from .weather_area import WeatherArea
+    from .growing import Growing
 
 
 class UserBase(SQLModel):
@@ -37,6 +38,7 @@ class User(UserBase, table=True):
     
     # リレーション
     weather_area: Optional["WeatherArea"] = Relationship(back_populates="users")
+    growings: List["Growing"] = Relationship(back_populates="user")
 
 
 class UserCreate(UserBase):
