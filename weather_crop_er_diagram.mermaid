@@ -1,0 +1,58 @@
+erDiagram
+    weather_area {
+        int id PK "Primary Key"
+        string prefecture "Prefecture name, Indexed"
+        string region "Region/division, Indexed"
+        string data_version "Data version"
+        datetime created_at "Not Null"
+        datetime updated_at "Not Null, Auto-update"
+    }
+    users {
+        int id PK "Primary Key"
+        string firebase_uid UK "Firebase UID, Unique, Indexed"
+        string email UK "Email address, Unique, Indexed"
+        string display_name "Display name, Optional"
+        string photo_url "Profile image URL, Optional"
+        string bio "Bio/self-introduction, Optional"
+        int weather_area_id FK "Optional"
+        boolean is_active "Account active flag, Default: True"
+        datetime created_at "Not Null"
+        datetime updated_at "Not Null, Auto-update"
+        datetime last_login_at "Optional"
+    }
+    postal_code {
+        int id PK "Primary Key"
+        string postal_code "7-digit postal code, Indexed"
+        string prefecture "Prefecture name, Indexed"
+        string city "City/ward name, Indexed"
+        string town "Town/district address, Indexed"
+        int weather_area_id FK "Optional"
+        string data_version "Data version, Default: ''"
+        datetime created_at "Not Null"
+        datetime updated_at "Not Null"
+    }
+    crop {
+        int id PK "Primary Key"
+        string code UK "Crop code, Unique, Indexed"
+        string category "Crop category, Indexed"
+        string name "Crop name, Indexed"
+        jsonb aliases "Alternative names, JSONB Array"
+        int difficulty "1-100 cultivation difficulty, Optional"
+        jsonb difficulty_reasons "Difficulty reasons, JSONB Array"
+        datetime created_at "Not Null"
+        datetime updated_at "Not Null"
+    }
+    crop_weather_area {
+        int id PK "Primary Key"
+        int crop_id FK "Not Null, Indexed"
+        int weather_area_id FK "Not Null, Indexed"
+        int difficulty "1-100 outdoor cultivation difficulty, Not Null"
+        jsonb difficulty_reasons "Array of difficulty reasons, JSONB"
+        datetime created_at "Not Null"
+        datetime updated_at "Not Null"
+    }
+    %% Relationships
+    weather_area ||--o{ users : "weather_area_id"
+    weather_area ||--o{ postal_code : "weather_area_id"
+    crop ||--o{ crop_weather_area : "crop_id"
+    weather_area ||--o{ crop_weather_area : "weather_area_id"
