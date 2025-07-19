@@ -1,0 +1,183 @@
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlmodel import Session, select
+from typing import List, Dict, Any, Optional
+
+from ..models.user import User
+from ..models.crop import Crop
+from ..models.weather_area import WeatherArea
+from ..models.crop_weather_area import CropWeatherArea
+from ..core.database import get_session
+from ..core.logging import get_logger
+
+router = APIRouter(prefix="/me", tags=["me"])
+logger = get_logger("me_api")
+
+
+def get_current_user_id() -> int:
+    """現在のユーザーIDを取得（認証機能実装後に置き換え予定）"""
+    # TODO: 認証機能実装後に JWT トークンからユーザーIDを取得するように変更
+    return 1
+
+
+@router.get("/weather-area", response_model=Dict[str, Any])
+def get_my_weather_area(
+    session: Session = Depends(get_session),
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """自分の設定気象地域情報を取得"""
+    logger.info(f"ユーザー{current_user_id}の気象地域情報取得")
+    
+    # ユーザーを取得
+    user = session.exec(select(User).where(User.id == current_user_id)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
+    
+    if not user.weather_area_id:
+        return {
+            "user_id": current_user_id,
+            "weather_area_id": None,
+            "weather_area": None,
+            "message": "気象地域が設定されていません"
+        }
+    
+    # 気象地域情報を取得
+    weather_area = session.exec(
+        select(WeatherArea).where(WeatherArea.id == user.weather_area_id)
+    ).first()
+    
+    return {
+        "user_id": current_user_id,
+        "weather_area_id": user.weather_area_id,
+        "weather_area": {
+            "id": weather_area.id,
+            "prefecture": weather_area.prefecture,
+            "region": weather_area.region
+        }
+    }
+
+
+@router.get("/crops", response_model=List[Dict[str, Any]])
+def get_my_crops_difficulties(
+    session: Session = Depends(get_session),
+    current_user_id: int = Depends(get_current_user_id),
+    limit: int = Query(50, ge=1, le=500, description="取得件数"),
+    category: Optional[str] = Query(None, description="作物カテゴリーフィルター")
+):
+    """自分の気象地域での全作物栽培難易度一覧を取得"""
+    logger.info(f"ユーザー{current_user_id}の作物栽培難易度一覧取得")
+    
+    # ユーザーを取得
+    user = session.exec(select(User).where(User.id == current_user_id)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
+    
+    if not user.weather_area_id:
+        raise HTTPException(status_code=400, detail="気象地域が設定されていません")
+    
+    # 気象地域情報を取得
+    weather_area = session.exec(
+        select(WeatherArea).where(WeatherArea.id == user.weather_area_id)
+    ).first()
+    
+    # 作物×気象地域の難易度データを取得
+    query = select(CropWeatherArea, Crop).join(
+        Crop, CropWeatherArea.crop_id == Crop.id
+    ).where(
+        CropWeatherArea.weather_area_id == user.weather_area_id
+    )
+    
+    # カテゴリーフィルター
+    if category:
+        query = query.where(Crop.category == category)
+    
+    # 難易度順でソート（難易度が低い順）
+    query = query.order_by(CropWeatherArea.difficulty.asc())
+    query = query.limit(limit)
+    
+    results = session.exec(query).all()
+    
+    crop_difficulties = []
+    for difficulty, crop in results:
+        crop_difficulties.append({
+            "crop": {
+                "id": crop.id,
+                "code": crop.code,
+                "name": crop.name,
+                "category": crop.category,
+                "aliases": crop.aliases
+            },
+            "difficulty": difficulty.difficulty,
+            "difficulty_reasons": difficulty.difficulty_reasons,
+            "weather_area": {
+                "id": weather_area.id,
+                "prefecture": weather_area.prefecture,
+                "region": weather_area.region
+            }
+        })
+    
+    return crop_difficulties
+
+
+@router.get("/crops/{crop_code}", response_model=Dict[str, Any])
+def get_my_crop_difficulty(
+    crop_code: str,
+    session: Session = Depends(get_session),
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """自分の気象地域での特定作物栽培難易度を取得"""
+    logger.info(f"ユーザー{current_user_id}の作物{crop_code}栽培難易度取得")
+    
+    # ユーザーを取得
+    user = session.exec(select(User).where(User.id == current_user_id)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
+    
+    if not user.weather_area_id:
+        raise HTTPException(status_code=400, detail="気象地域が設定されていません")
+    
+    # 作物を取得
+    crop = session.exec(select(Crop).where(Crop.code == crop_code)).first()
+    if not crop:
+        raise HTTPException(status_code=404, detail=f"作物コード '{crop_code}' が見つかりません")
+    
+    # 気象地域情報を取得
+    weather_area = session.exec(
+        select(WeatherArea).where(WeatherArea.id == user.weather_area_id)
+    ).first()
+    
+    # 作物×気象地域の難易度を取得
+    difficulty = session.exec(
+        select(CropWeatherArea).where(
+            CropWeatherArea.crop_id == crop.id,
+            CropWeatherArea.weather_area_id == user.weather_area_id
+        )
+    ).first()
+    
+    if not difficulty:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"この気象地域での作物 '{crop_code}' の栽培難易度データが見つかりません"
+        )
+    
+    return {
+        "crop": {
+            "id": crop.id,
+            "code": crop.code,
+            "name": crop.name,
+            "category": crop.category,
+            "aliases": crop.aliases,
+            "difficulty": crop.difficulty,
+            "difficulty_reasons": crop.difficulty_reasons
+        },
+        "outdoor_cultivation": {
+            "difficulty": difficulty.difficulty,
+            "difficulty_reasons": difficulty.difficulty_reasons
+        },
+        "weather_area": {
+            "id": weather_area.id,
+            "prefecture": weather_area.prefecture,
+            "region": weather_area.region
+        },
+        "created_at": difficulty.created_at,
+        "updated_at": difficulty.updated_at
+    }

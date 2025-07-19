@@ -6,6 +6,8 @@ from ..models.crop import Crop, CropRead, CropCreate
 from ..core.database import get_session
 from ..services.crop_service import CropService
 from ..services.crop_difficulty_import_service import CropDifficultyImportService
+from ..services.crop_weather_difficulty_import_service import CropWeatherDifficultyImportService
+from ..services.crop_area_difficulty_import_service import CropAreaDifficultyImportService
 from ..core.logging import get_logger
 
 router = APIRouter(prefix="/crops", tags=["crops"])
@@ -20,6 +22,16 @@ def get_crop_service(session: Session = Depends(get_session)) -> CropService:
 def get_difficulty_import_service(session: Session = Depends(get_session)) -> CropDifficultyImportService:
     """作物難易度インポートサービスを取得"""
     return CropDifficultyImportService(session)
+
+
+def get_weather_difficulty_import_service(session: Session = Depends(get_session)) -> CropWeatherDifficultyImportService:
+    """作物×気象地域難易度インポートサービスを取得"""
+    return CropWeatherDifficultyImportService(session)
+
+
+def get_area_difficulty_import_service(session: Session = Depends(get_session)) -> CropAreaDifficultyImportService:
+    """作物別気象地域難易度インポートサービスを取得"""
+    return CropAreaDifficultyImportService(session)
 
 
 @router.get("/", response_model=List[CropRead])
@@ -87,3 +99,23 @@ def get_difficulty_stats(
     """作物難易度統計情報を取得"""
     logger.info("作物難易度統計情報取得")
     return difficulty_service.get_difficulty_stats()
+
+
+@router.post("/import-area-difficulties", response_model=Dict[str, Any])
+def import_crop_area_difficulties(
+    area_difficulty_service: CropAreaDifficultyImportService = Depends(get_area_difficulty_import_service)
+):
+    """作物別気象地域難易度データをディレクトリからインポート"""
+    logger.info("作物別気象地域難易度データインポート開始")
+    return area_difficulty_service.import_crop_area_difficulties_from_directory()
+
+
+@router.get("/stats/area-difficulties", response_model=Dict[str, Any])
+def get_area_difficulty_stats(
+    area_difficulty_service: CropAreaDifficultyImportService = Depends(get_area_difficulty_import_service)
+):
+    """作物別気象地域難易度統計情報を取得"""
+    logger.info("作物別気象地域難易度統計情報取得")
+    return area_difficulty_service.get_import_stats()
+
+

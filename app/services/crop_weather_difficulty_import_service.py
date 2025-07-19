@@ -1,5 +1,5 @@
 """
-作物難易度データインポートサービス
+作物×気象地域の露地栽培難易度インポートサービス
 """
 import csv
 from pathlib import Path
@@ -8,25 +8,28 @@ from sqlmodel import Session, select
 from datetime import datetime
 
 from ..models.crop import Crop
+from ..models.weather_area import WeatherArea
+from ..models.crop_weather_area import CropWeatherArea
 from ..core.database import get_sync_session
 from ..core.config import settings
 from ..core.logging import get_logger
 
-logger = get_logger("crop_difficulty_import")
+logger = get_logger("crop_weather_difficulty_import")
 
 
-class CropDifficultyImportService:
-    """作物難易度インポートサービス"""
+class CropWeatherDifficultyImportService:
+    """作物×気象地域の露地栽培難易度インポートサービス"""
     
     def __init__(self, session: Session = None):
         self.session = session or get_sync_session()
     
-    def import_crop_difficulties_from_csv(
+    def import_outdoor_difficulties_from_csv(
         self, 
         csv_file_path: str = None
     ) -> Dict[str, Any]:
         """
-        CSVファイルから作物難易度データをインポート
+        CSVファイルから露地栽培難易度データをインポート
+        全ての気象地域に対して同じ難易度を設定
         
         Args:
             csv_file_path: CSVファイルのパス
@@ -43,11 +46,11 @@ class CropDifficultyImportService:
             logger.error(f"CSVファイルが見つかりません: {csv_path}")
             raise FileNotFoundError(f"CSVファイルが見つかりません: {csv_path}")
         
-        logger.info(f"作物難易度データインポート開始: {csv_path}")
+        logger.info(f"露地栽培難易度データインポート開始: {csv_path}")
         
         try:
-            difficulty_data = self._read_crop_difficulties_from_csv(csv_path)
-            stats = self._update_crops_with_difficulties(difficulty_data)
+            difficulty_data = self._read_outdoor_difficulties_from_csv(csv_path)
+            stats = self._create_crop_weather_difficulties(difficulty_data)
             
             logger.info(f"インポート完了: {stats}")
             return stats
@@ -56,8 +59,8 @@ class CropDifficultyImportService:
             logger.error(f"インポートエラー: {e}")
             raise
     
-    def _read_crop_difficulties_from_csv(self, csv_path: Path) -> List[Dict[str, Any]]:
-        """CSVファイルから作物難易度データを読み込み"""
+    def _read_outdoor_difficulties_from_csv(self, csv_path: Path) -> List[Dict[str, Any]]:
+        """CSVファイルから露地栽培難易度データを読み込み"""
         difficulties = []
         
         with open(csv_path, 'r', encoding='utf-8') as file:
@@ -94,14 +97,19 @@ class CropDifficultyImportService:
                     logger.error(f"行 {row_num} の読み込みエラー: {e}")
                     continue
         
-        logger.info(f"CSVから {len(difficulties)} 件の難易度データを読み込みました")
+        logger.info(f"CSVから {len(difficulties)} 件の露地栽培難易度データを読み込みました")
         return difficulties
     
-    def _update_crops_with_difficulties(self, difficulty_data: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """作物テーブルに難易度データを更新"""
+    def _create_crop_weather_difficulties(self, difficulty_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """作物×気象地域の難易度データを作成"""
+        created_count = 0
         updated_count = 0
-        not_found_count = 0
+        crop_not_found_count = 0
         error_count = 0
+        
+        # 全ての気象地域を取得
+        weather_areas = self.session.exec(select(WeatherArea)).all()
+        logger.info(f"気象地域数: {len(weather_areas)}")
         
         for data in difficulty_data:
             try:
@@ -122,21 +130,43 @@ class CropDifficultyImportService:
                             crop = c
                             break
                 
-                if crop:
-                    # 難易度情報を更新
-                    crop.difficulty = difficulty
-                    crop.difficulty_reasons = reasons
-                    crop.updated_at = datetime.now()
-                    
-                    updated_count += 1
-                    logger.debug(f"更新: {crop_name} -> 難易度 {difficulty}")
-                else:
-                    not_found_count += 1
+                if not crop:
+                    crop_not_found_count += 1
                     logger.debug(f"作物が見つかりません: {crop_name}")
+                    continue
+                
+                # 全ての気象地域に対して難易度データを作成
+                for weather_area in weather_areas:
+                    # 既存データをチェック
+                    existing = self.session.exec(
+                        select(CropWeatherArea).where(
+                            CropWeatherArea.crop_id == crop.id,
+                            CropWeatherArea.weather_area_id == weather_area.id
+                        )
+                    ).first()
+                    
+                    if existing:
+                        # 更新
+                        existing.difficulty = difficulty
+                        existing.difficulty_reasons = reasons
+                        existing.updated_at = datetime.now()
+                        updated_count += 1
+                    else:
+                        # 新規作成
+                        new_difficulty = CropWeatherArea(
+                            crop_id=crop.id,
+                            weather_area_id=weather_area.id,
+                            difficulty=difficulty,
+                            difficulty_reasons=reasons
+                        )
+                        self.session.add(new_difficulty)
+                        created_count += 1
+                
+                logger.debug(f"処理完了: {crop_name} -> 難易度 {difficulty} ({len(weather_areas)} 地域)")
                 
             except Exception as e:
                 error_count += 1
-                logger.error(f"作物 {data.get('crop_name', 'unknown')} の更新エラー: {e}")
+                logger.error(f"作物 {data.get('crop_name', 'unknown')} の処理エラー: {e}")
                 continue
         
         # 変更をコミット
@@ -149,40 +179,43 @@ class CropDifficultyImportService:
             raise
         
         return {
-            "total_processed": len(difficulty_data),
-            "updated": updated_count,
-            "not_found": not_found_count,
+            "total_crops_processed": len(difficulty_data),
+            "weather_areas_count": len(weather_areas),
+            "combinations_created": created_count,
+            "combinations_updated": updated_count,
+            "crops_not_found": crop_not_found_count,
             "errors": error_count
         }
     
     def get_difficulty_stats(self) -> Dict[str, Any]:
-        """難易度統計情報を取得"""
+        """作物×気象地域の難易度統計情報を取得"""
         try:
-            # 全作物数
-            total_crops = len(self.session.exec(select(Crop)).all())
+            # 総組み合わせ数
+            total_combinations = len(self.session.exec(select(CropWeatherArea)).all())
             
-            # 難易度が設定された作物数
-            crops_with_difficulty = len(self.session.exec(
-                select(Crop).where(Crop.difficulty.is_not(None))
-            ).all())
+            # 作物数と気象地域数
+            total_crops = len(self.session.exec(select(Crop)).all())
+            total_weather_areas = len(self.session.exec(select(WeatherArea)).all())
+            
+            # 理論的最大組み合わせ数
+            max_combinations = total_crops * total_weather_areas
             
             # 難易度別の分布
             difficulty_distribution = {}
-            crops = self.session.exec(
-                select(Crop).where(Crop.difficulty.is_not(None))
-            ).all()
+            combinations = self.session.exec(select(CropWeatherArea)).all()
             
-            for crop in crops:
-                difficulty_range = self._get_difficulty_range(crop.difficulty)
+            for combination in combinations:
+                difficulty_range = self._get_difficulty_range(combination.difficulty)
                 if difficulty_range not in difficulty_distribution:
                     difficulty_distribution[difficulty_range] = 0
                 difficulty_distribution[difficulty_range] += 1
             
             return {
                 "total_crops": total_crops,
-                "crops_with_difficulty": crops_with_difficulty,
-                "crops_without_difficulty": total_crops - crops_with_difficulty,
-                "coverage_rate": (crops_with_difficulty / total_crops * 100) if total_crops > 0 else 0,
+                "total_weather_areas": total_weather_areas,
+                "total_combinations": total_combinations,
+                "max_possible_combinations": max_combinations,
+                "coverage_rate": (total_combinations / max_combinations * 100) if max_combinations > 0 else 0,
                 "difficulty_distribution": difficulty_distribution
             }
             
