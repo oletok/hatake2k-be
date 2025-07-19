@@ -5,6 +5,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 
 class Crop(SQLModel, table=True):
+    __tablename__ = "crops"
+    
     id: Optional[int] = Field(default=None, primary_key=True)
     code: str = Field(unique=True, index=True)
     category: str = Field(index=True)

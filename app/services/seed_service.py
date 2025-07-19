@@ -109,8 +109,7 @@ class SeedService:
                     # 既存の気象地域をチェック
                     existing_area = self.session.query(WeatherArea).filter(
                         WeatherArea.prefecture == row['都道府県名'],
-                        WeatherArea.region == row['区分'],
-                        WeatherArea.city == city
+                        WeatherArea.region == row['区分']
                     ).first()
                     
                     if existing_area:
@@ -120,7 +119,6 @@ class SeedService:
                     weather_area = WeatherArea(
                         prefecture=row['都道府県名'],
                         region=row['区分'],
-                        city=city,
                         data_version="seed_v1.0",
                         created_at=datetime.now(),
                         updated_at=datetime.now()

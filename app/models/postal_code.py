@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 class PostalCode(SQLModel, table=True):
     """郵便番号テーブル"""
     
-    __tablename__ = "postal_code"
+    __tablename__ = "postal_codes"
     
     id: Optional[int] = Field(default=None, primary_key=True)
     postal_code: str = Field(index=True, description="郵便番号7桁")
@@ -18,7 +18,7 @@ class PostalCode(SQLModel, table=True):
     town: str = Field(index=True, description="町域丁目番地")
     
     # 気象地域への外部キー
-    weather_area_id: Optional[int] = Field(default=None, foreign_key="weather_area.id")
+    weather_area_id: Optional[int] = Field(default=None, foreign_key="weather_areas.id")
     
     # メンテナンス用フィールド
     data_version: str = Field(default="", description="データバージョン")

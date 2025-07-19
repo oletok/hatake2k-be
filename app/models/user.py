@@ -13,7 +13,7 @@ class UserBase(SQLModel):
     display_name: Optional[str] = Field(default=None, description="表示名")
     photo_url: Optional[str] = Field(default=None, description="プロフィール画像URL")
     bio: Optional[str] = Field(default=None, description="自己紹介")
-    weather_area_id: Optional[int] = Field(default=None, foreign_key="weather_area.id", description="気象地域ID")
+    weather_area_id: Optional[int] = Field(default=None, foreign_key="weather_areas.id", description="気象地域ID")
     is_active: bool = Field(default=True, description="アカウント有効フラグ")
 
 

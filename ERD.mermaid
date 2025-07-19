@@ -1,0 +1,65 @@
+erDiagram
+    %% 自動生成されたER図 - 2025-07-19 13:07:44
+
+    users {
+        int id PK "主キー"
+        string firebase_uid UK "Firebase UID"
+        string email UK "メールアドレス"
+        string display_name "表示名"
+        string photo_url "プロフィール画像URL"
+        string bio "自己紹介"
+        int weather_area_id FK "気象地域ID"
+        boolean is_active "アカウント有効フラグ"
+        datetime created_at "作成日時"
+        datetime updated_at "更新日時"
+        datetime last_login_at "最終ログイン日時"
+    }
+
+    crops {
+        int id PK "主キー"
+        string code UK "コード"
+        string category "カテゴリ"
+        string name "名前"
+        jsonb aliases "別名・異名リスト"
+        int difficulty "栽培難易度 (1-100)"
+        jsonb difficulty_reasons "難易度の理由配列"
+        datetime created_at "作成日時"
+        datetime updated_at "更新日時"
+    }
+
+    crop_weather_areas {
+        int id PK "主キー"
+        int crop_id FK "農作物ID"
+        int weather_area_id FK "気象地域ID"
+        int difficulty "露地栽培難易度 (1-100)"
+        jsonb difficulty_reasons "難易度の理由配列"
+        datetime created_at "作成日時"
+        datetime updated_at "更新日時"
+    }
+
+    weather_areas {
+        int id PK "主キー"
+        string prefecture "都道府県名"
+        string region "地方・区分"
+        string data_version "データバージョン"
+        datetime created_at "作成日時"
+        datetime updated_at "更新日時"
+    }
+
+    postal_codes {
+        int id PK "主キー"
+        string postal_code "郵便番号7桁"
+        string prefecture "都道府県名"
+        string city "市区町村名"
+        string town "町域丁目番地"
+        int weather_area_id FK "気象地域ID"
+        string data_version "データバージョン"
+        datetime created_at "作成日時"
+        datetime updated_at "更新日時"
+    }
+
+    %% Relations
+    users }o--|| weather_areas : "weather_area"
+    crop_weather_areas }o--|| crops : "crop"
+    crop_weather_areas }o--|| weather_areas : "weather_area"
+    weather_areas ||--o{ postal_codes : "postal_codes"

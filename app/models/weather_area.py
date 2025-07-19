@@ -17,7 +17,7 @@ class WeatherAreaBase(SQLModel):
 
 class WeatherArea(WeatherAreaBase, table=True):
     """気象地域テーブル"""
-    __tablename__ = "weather_area"
+    __tablename__ = "weather_areas"
     
     id: Optional[int] = Field(default=None, primary_key=True)
     created_at: datetime = Field(

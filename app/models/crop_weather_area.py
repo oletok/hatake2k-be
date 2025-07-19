@@ -9,11 +9,11 @@ from .weather_area import WeatherArea
 
 class CropWeatherArea(SQLModel, table=True):
     """作物×気象地域の栽培難易度"""
-    __tablename__ = "crop_weather_area"
+    __tablename__ = "crop_weather_areas"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    crop_id: int = Field(foreign_key="crop.id", index=True)
-    weather_area_id: int = Field(foreign_key="weather_area.id", index=True)
+    crop_id: int = Field(foreign_key="crops.id", index=True)
+    weather_area_id: int = Field(foreign_key="weather_areas.id", index=True)
     difficulty: int = Field(description="露地栽培難易度 (1-100)")
     difficulty_reasons: List[str] = Field(default_factory=list, sa_column=Column(JSONB), description="難易度の理由配列")
     created_at: datetime = Field(default_factory=datetime.now)
