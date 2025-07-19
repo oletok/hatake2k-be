@@ -12,6 +12,7 @@ class WeatherAreaBase(SQLModel):
     """気象地域基本モデル"""
     prefecture: str = Field(index=True, description="都道府県名")
     region: str = Field(index=True, description="地方・区分")
+    city: str = Field(index=True, description="市区町村名")
     data_version: str = Field(description="データバージョン")
 
 
@@ -50,6 +51,7 @@ class WeatherAreaSearch(BaseModel):
     """気象地域検索用モデル"""
     prefecture: Optional[str] = None
     region: Optional[str] = None
+    city: Optional[str] = None
 
 
 class WeatherAreaImportStats(BaseModel):

@@ -222,7 +222,7 @@ class PostalCodeService:
     def _clear_existing_data(self) -> None:
         """既存データを削除"""
         try:
-            self.session.exec(text("DELETE FROM postal_code"))
+            self.session.exec(text("DELETE FROM postal_codes"))
             self.session.commit()
             logger.info("既存の郵便番号データを削除しました")
         except Exception as e:
@@ -360,7 +360,7 @@ class PostalCodeService:
             prefecture_counts = self.session.exec(
                 text("""
                 SELECT prefecture, COUNT(*) as count 
-                FROM postal_code 
+                FROM postal_codes 
                 GROUP BY prefecture 
                 ORDER BY count DESC
                 """)

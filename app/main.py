@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from .api.crops import router as crops_router
 from .api.postal_codes import router as postal_codes_router
-from .api.weather_areas import router as weather_areas_router
+# from .api.weather_areas import router as weather_areas_router
 from .api.me import router as me_router
 from .core.database import create_db_and_tables, health_check
 from .core.config import settings
@@ -36,7 +36,7 @@ app = FastAPI(
 # API ルーターを追加
 app.include_router(crops_router)
 app.include_router(postal_codes_router)
-app.include_router(weather_areas_router)
+# app.include_router(weather_areas_router)
 app.include_router(me_router)
 
 

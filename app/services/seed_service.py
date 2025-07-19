@@ -4,6 +4,7 @@ from app.models.crop import Crop
 from app.models.weather_area import WeatherArea
 from app.models.postal_code import PostalCode
 from app.core.logging import get_logger
+from .postal_code_weather_mapping_service import PostalCodeWeatherMappingService
 import csv
 import os
 from datetime import datetime
@@ -106,10 +107,15 @@ class SeedService:
                 cities = row['市区町村名'].split('|')
                 
                 for city in cities:
-                    # 既存の気象地域をチェック
+                    city = city.strip()  # 空白を除去
+                    if not city:  # 空の市区町村名はスキップ
+                        continue
+                        
+                    # 既存の気象地域をチェック（都道府県名、区分、市区町村名の組み合わせ）
                     existing_area = self.session.query(WeatherArea).filter(
                         WeatherArea.prefecture == row['都道府県名'],
-                        WeatherArea.region == row['区分']
+                        WeatherArea.region == row['区分'],
+                        WeatherArea.city == city
                     ).first()
                     
                     if existing_area:
@@ -119,6 +125,7 @@ class SeedService:
                     weather_area = WeatherArea(
                         prefecture=row['都道府県名'],
                         region=row['区分'],
+                        city=city,
                         data_version="seed_v1.0",
                         created_at=datetime.now(),
                         updated_at=datetime.now()
@@ -200,10 +207,15 @@ class SeedService:
         # 郵便番号データのシード
         postal_codes = self.seed_postal_codes()
         
+        # 郵便番号と気象地域のマッピング
+        mapping_service = PostalCodeWeatherMappingService(self.session)
+        mapping_result = mapping_service.map_postal_codes_to_weather_areas()
+        
         logger.info("全てのシード処理が完了しました")
         return {
             "test_user": test_user,
             "crops": len(crops),
             "weather_areas": len(weather_areas),
-            "postal_codes": len(postal_codes)
+            "postal_codes": len(postal_codes),
+            "postal_code_mapping": mapping_result
         }

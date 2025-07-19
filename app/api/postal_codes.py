@@ -3,15 +3,15 @@ from sqlmodel import Session
 from typing import List, Optional, Dict, Any
 
 from ..models.postal_code import (
-    PostalCode, 
+    # PostalCode, 
     PostalCodeRead, 
     PostalCodeSearch,
-    PostalCodeImportStats,
-    PostalCodeWithWeatherArea
+    # PostalCodeImportStats,
+    # PostalCodeWithWeatherArea
 )
 from ..core.database import get_session
 from ..services.postal_code_service import PostalCodeService
-from ..services.postal_code_weather_mapping_service import PostalCodeWeatherMappingService
+# from ..services.postal_code_weather_mapping_service import PostalCodeWeatherMappingService
 from ..core.logging import get_logger
 
 router = APIRouter(prefix="/postal-codes", tags=["postal-codes"])
@@ -23,31 +23,31 @@ def get_postal_code_service(session: Session = Depends(get_session)) -> PostalCo
     return PostalCodeService(session)
 
 
-def get_mapping_service(session: Session = Depends(get_session)) -> PostalCodeWeatherMappingService:
-    """郵便番号気象地域マッピングサービスを取得"""
-    return PostalCodeWeatherMappingService(session)
+# def get_mapping_service(session: Session = Depends(get_session)) -> PostalCodeWeatherMappingService:
+#     """郵便番号気象地域マッピングサービスを取得"""
+#     return PostalCodeWeatherMappingService(session)
 
 
-@router.get("/search", response_model=List[PostalCodeRead])
-def search_postal_codes(
-    postal_code: Optional[str] = Query(None, description="郵便番号（部分一致）"),
-    prefecture: Optional[str] = Query(None, description="都道府県名（部分一致）"),
-    city: Optional[str] = Query(None, description="市区町村名（部分一致）"),
-    town: Optional[str] = Query(None, description="町域名（部分一致）"),
-    limit: int = Query(100, ge=1, le=1000, description="取得件数"),
-    postal_service: PostalCodeService = Depends(get_postal_code_service)
-):
-    """郵便番号検索"""
-    logger.info(f"郵便番号検索: postal_code={postal_code}, prefecture={prefecture}, city={city}, town={town}")
+# @router.get("/search", response_model=List[PostalCodeRead])
+# def search_postal_codes(
+#     postal_code: Optional[str] = Query(None, description="郵便番号（部分一致）"),
+#     prefecture: Optional[str] = Query(None, description="都道府県名（部分一致）"),
+#     city: Optional[str] = Query(None, description="市区町村名（部分一致）"),
+#     town: Optional[str] = Query(None, description="町域名（部分一致）"),
+#     limit: int = Query(100, ge=1, le=1000, description="取得件数"),
+#     postal_service: PostalCodeService = Depends(get_postal_code_service)
+# ):
+#     """郵便番号検索"""
+#     logger.info(f"郵便番号検索: postal_code={postal_code}, prefecture={prefecture}, city={city}, town={town}")
     
-    search_params = PostalCodeSearch(
-        postal_code=postal_code,
-        prefecture=prefecture,
-        city=city,
-        town=town
-    )
+#     search_params = PostalCodeSearch(
+#         postal_code=postal_code,
+#         prefecture=prefecture,
+#         city=city,
+#         town=town
+#     )
     
-    return postal_service.search_postal_codes(search_params, limit)
+#     return postal_service.search_postal_codes(search_params, limit)
 
 
 @router.get("/code/{postal_code}", response_model=List[PostalCodeRead])
@@ -88,62 +88,62 @@ def get_postal_code_stats(
 
 
 
-@router.get("/prefectures/", response_model=List[str])
-def get_prefectures(
-    postal_service: PostalCodeService = Depends(get_postal_code_service)
-):
-    """都道府県一覧を取得"""
-    logger.info("都道府県一覧取得")
+# @router.get("/prefectures/", response_model=List[str])
+# def get_prefectures(
+#     postal_service: PostalCodeService = Depends(get_postal_code_service)
+# ):
+#     """都道府県一覧を取得"""
+#     logger.info("都道府県一覧取得")
     
-    stats = postal_service.get_postal_code_stats()
-    prefectures = list(stats.get("prefecture_counts", {}).keys())
+#     stats = postal_service.get_postal_code_stats()
+#     prefectures = list(stats.get("prefecture_counts", {}).keys())
     
-    return sorted(prefectures)
+#     return sorted(prefectures)
 
 
-@router.get("/cities/{prefecture}", response_model=List[str])
-def get_cities_by_prefecture(
-    prefecture: str,
-    postal_service: PostalCodeService = Depends(get_postal_code_service)
-):
-    """都道府県別の市区町村一覧を取得"""
-    logger.info(f"市区町村一覧取得: {prefecture}")
+# @router.get("/cities/{prefecture}", response_model=List[str])
+# def get_cities_by_prefecture(
+#     prefecture: str,
+#     postal_service: PostalCodeService = Depends(get_postal_code_service)
+# ):
+#     """都道府県別の市区町村一覧を取得"""
+#     logger.info(f"市区町村一覧取得: {prefecture}")
     
-    search_params = PostalCodeSearch(prefecture=prefecture)
-    results = postal_service.search_postal_codes(search_params, limit=10000)
+#     search_params = PostalCodeSearch(prefecture=prefecture)
+#     results = postal_service.search_postal_codes(search_params, limit=10000)
     
-    cities = list(set(result.city for result in results))
-    return sorted(cities)
+#     cities = list(set(result.city for result in results))
+#     return sorted(cities)
 
 
-@router.get("/search-with-weather", response_model=List[PostalCodeWithWeatherArea])
-def search_postal_codes_with_weather_area(
-    postal_code: Optional[str] = Query(None, description="郵便番号（部分一致）"),
-    prefecture: Optional[str] = Query(None, description="都道府県名（部分一致）"),
-    city: Optional[str] = Query(None, description="市区町村名（部分一致）"),
-    town: Optional[str] = Query(None, description="町域名（部分一致）"),
-    limit: int = Query(100, ge=1, le=1000, description="取得件数"),
-    postal_service: PostalCodeService = Depends(get_postal_code_service)
-):
-    """気象地域情報を含む郵便番号検索"""
-    logger.info(f"気象地域情報を含む郵便番号検索: postal_code={postal_code}, prefecture={prefecture}, city={city}, town={town}")
+# @router.get("/search-with-weather", response_model=List[PostalCodeWithWeatherArea])
+# def search_postal_codes_with_weather_area(
+#     postal_code: Optional[str] = Query(None, description="郵便番号（部分一致）"),
+#     prefecture: Optional[str] = Query(None, description="都道府県名（部分一致）"),
+#     city: Optional[str] = Query(None, description="市区町村名（部分一致）"),
+#     town: Optional[str] = Query(None, description="町域名（部分一致）"),
+#     limit: int = Query(100, ge=1, le=1000, description="取得件数"),
+#     postal_service: PostalCodeService = Depends(get_postal_code_service)
+# ):
+#     """気象地域情報を含む郵便番号検索"""
+#     logger.info(f"気象地域情報を含む郵便番号検索: postal_code={postal_code}, prefecture={prefecture}, city={city}, town={town}")
     
-    search_params = PostalCodeSearch(
-        postal_code=postal_code,
-        prefecture=prefecture,
-        city=city,
-        town=town
-    )
+#     search_params = PostalCodeSearch(
+#         postal_code=postal_code,
+#         prefecture=prefecture,
+#         city=city,
+#         town=town
+#     )
     
-    return postal_service.search_postal_codes_with_weather_area(search_params, limit)
+#     return postal_service.search_postal_codes_with_weather_area(search_params, limit)
 
 
 
 
-@router.get("/mapping-stats")
-def get_mapping_statistics(
-    mapping_service: PostalCodeWeatherMappingService = Depends(get_mapping_service)
-):
-    """郵便番号と気象地域のマッピング統計情報を取得"""
-    logger.info("マッピング統計情報取得")
-    return mapping_service.get_mapping_statistics()
+# @router.get("/mapping-stats")
+# def get_mapping_statistics(
+#     mapping_service: PostalCodeWeatherMappingService = Depends(get_mapping_service)
+# ):
+#     """郵便番号と気象地域のマッピング統計情報を取得"""
+#     logger.info("マッピング統計情報取得")
+#     return mapping_service.get_mapping_statistics()
